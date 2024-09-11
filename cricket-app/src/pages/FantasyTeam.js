@@ -14,7 +14,7 @@ const FantasyTeam = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/team?countryName=${countryName}`);
+            const response = await fetch(`http://localhost:8080/v1/api/team?countryName=${countryName}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch player data');
             }

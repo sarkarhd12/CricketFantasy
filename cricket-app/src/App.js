@@ -7,6 +7,8 @@ import Contact from './pages/Contact';
 import Blogs from './pages/Blogs';
 import FantasyTeam from './pages/FantasyTeam';
 import Footer from './components/Footer';
+import PlayerDetail from './components/PlayerDetail';
+import PlayerListByCountry from './pages/PlayerListByCountry';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/blogs" element={<Blogs />} />
           <Route path="/fantasy" element={<FantasyTeam />} />
+          <Route path="/team" element={<PlayerListByCountry />} />
+          <Route path="/player/:name" element={<PlayerDetail />} />
         </Routes>
       </div>
       <Footer />
