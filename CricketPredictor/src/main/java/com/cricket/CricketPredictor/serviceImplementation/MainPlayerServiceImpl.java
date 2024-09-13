@@ -2,8 +2,7 @@ package com.cricket.CricketPredictor.serviceImplementation;
 
 import com.cricket.CricketPredictor.Exception.CountryNotFoundException;
 import com.cricket.CricketPredictor.Exception.PlayerNotFoundException;
-import com.cricket.CricketPredictor.dto.FantasyTeamDto;
-import com.cricket.CricketPredictor.dto.MainDto;
+import com.cricket.CricketPredictor.dto.*;
 import com.cricket.CricketPredictor.entity.Batsman;
 import com.cricket.CricketPredictor.entity.Bowler;
 import com.cricket.CricketPredictor.repository.BatsmanRepo;
@@ -12,6 +11,7 @@ import com.cricket.CricketPredictor.service.MainPlayerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -33,20 +33,20 @@ public class MainPlayerServiceImpl implements MainPlayerService {
     }
 
     @Override
-    public List<MainDto> findByName(String name) {
-        List<MainDto> players = new ArrayList<>();
+    public List<PlayerDto> findByName(String name) {
+        List<PlayerDto> players = new ArrayList<>();
 
         // Fetching bowlers and batsmen
         List<Bowler> bowlers = bowlerRepository.findByPlayerContainingIgnoreCase(name);
         List<Batsman> batsmen = batsmanRepository.findByPlayerContainingIgnoreCase(name);
 
         // Mapping to hold already processed players
-        Map<String, MainDto> playerMap = new HashMap<>();
+        Map<String, PlayerDto> playerMap = new HashMap<>();
 
         // Process bowlers first
         for (Bowler bowler : bowlers) {
             String key = bowler.getPlayer() + "_" + bowler.getCountryName();
-            MainDto dto = playerMap.getOrDefault(key, new MainDto());
+            PlayerDto dto = playerMap.getOrDefault(key, new PlayerDto());
 
             dto.setPlayer(bowler.getPlayer());
             dto.setSpan(bowler.getSpan());
@@ -68,7 +68,7 @@ public class MainPlayerServiceImpl implements MainPlayerService {
         // Process batsmen and merge if exists
         for (Batsman batsman : batsmen) {
             String key = batsman.getPlayer() + "_" + batsman.getCountryName();
-            MainDto dto = playerMap.getOrDefault(key, new MainDto());
+            PlayerDto dto = playerMap.getOrDefault(key, new PlayerDto());
 
             dto.setPlayer(batsman.getPlayer());
             dto.setSpan(batsman.getSpan());
@@ -87,31 +87,31 @@ public class MainPlayerServiceImpl implements MainPlayerService {
 
             playerMap.put(key, dto);
         }
-        if (players.isEmpty()) {
-            throw new PlayerNotFoundException("No players found with the name: " + name);
-        }
+
 
         // Add all players from the map to the result list
         players.addAll(playerMap.values());
-
+        if (players.isEmpty()) {
+            throw new PlayerNotFoundException("No players found with the name: " + name);
+        }
 
         return players;
     }
 
 
     @Override
-    public Page<MainDto> getAllPlayers(Pageable pageable) {
+    public Page<PlayerDto> getAllPlayers(Pageable pageable) {
         // Fetching bowlers and batsmen
         List<Bowler> bowlers = bowlerRepository.findAll();
         List<Batsman> batsmen = batsmanRepository.findAll();
 
         // Mapping to hold already processed players
-        Map<String, MainDto> playerMap = new HashMap<>();
+        Map<String, PlayerDto> playerMap = new HashMap<>();
 
         // Process bowlers first
         for (Bowler bowler : bowlers) {
             String key = bowler.getPlayer() + "_" + bowler.getCountryName();
-            MainDto dto = playerMap.getOrDefault(key, new MainDto());
+            PlayerDto dto = playerMap.getOrDefault(key, new PlayerDto());
 
             dto.setPlayer(bowler.getPlayer());
             dto.setSpan(bowler.getSpan());
@@ -133,7 +133,7 @@ public class MainPlayerServiceImpl implements MainPlayerService {
         // Process batsmen and merge if exists
         for (Batsman batsman : batsmen) {
             String key = batsman.getPlayer() + "_" + batsman.getCountryName();
-            MainDto dto = playerMap.getOrDefault(key, new MainDto());
+            PlayerDto dto = playerMap.getOrDefault(key, new PlayerDto());
 
             dto.setPlayer(batsman.getPlayer());
             dto.setSpan(batsman.getSpan());
@@ -154,10 +154,10 @@ public class MainPlayerServiceImpl implements MainPlayerService {
         }
 
         // Convert the map values to a list and paginate
-        List<MainDto> playerList = new ArrayList<>(playerMap.values());
+        List<PlayerDto> playerList = new ArrayList<>(playerMap.values());
         int start = (int)pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), playerList.size());
-        Page<MainDto> page = new PageImpl<>(playerList.subList(start, end), pageable, playerList.size());
+        Page<PlayerDto> page = new PageImpl<>(playerList.subList(start, end), pageable, playerList.size());
 
         if (page.isEmpty()) {
             throw new PlayerNotFoundException("No players found!");
@@ -200,6 +200,96 @@ public class MainPlayerServiceImpl implements MainPlayerService {
         return fantasyTeam;
     }
 
+    @Override
+    public List<PlayerNameDto> SearchByName(String query) {
+        List<Bowler> bowlers = bowlerRepository.findByPlayerContainingIgnoreCase(query);
+        List<Batsman> batsmen = batsmanRepository.findByPlayerContainingIgnoreCase(query);
+
+        // Use a map to combine players by name and country
+        Map<String, PlayerNameDto> playerMap = new HashMap<>();
+
+        // Convert bowlers to DTOs and add to the map
+        bowlers.forEach(bowler -> {
+            String key = bowler.getPlayer() + "-" + bowler.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(bowler.getPlayer(), bowler.getCountryName()));
+        });
+
+        // Convert batsmen to DTOs and add to the map
+        batsmen.forEach(batsman -> {
+            String key = batsman.getPlayer() + "-" + batsman.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(batsman.getPlayer(), batsman.getCountryName()));
+        });
+
+        // Convert the map values to a list
+        List<PlayerNameDto> playerNameDtos = new ArrayList<>(playerMap.values());
+
+        // Limit the number of suggestions
+        // If you need to limit the number of results, uncomment the following line
+        // playerNameDtos = playerNameDtos.stream().limit(10).collect(Collectors.toList());
+
+        return playerNameDtos;
+    }
+
+    @Override
+    public List<PlayerNameDto> findPlayerByCountryName(String countryName) {
+        List<Bowler> bowlers = bowlerRepository.findByCountryNameContainingIgnoreCase(countryName);
+        List<Batsman> batsmen = batsmanRepository.findByCountryNameContainingIgnoreCase(countryName);
+
+        // Use a map to combine players by name and country
+        Map<String, PlayerNameDto> playerMap = new HashMap<>();
+
+        // Convert bowlers to DTOs and add to the map
+        bowlers.forEach(bowler -> {
+            String key = bowler.getPlayer() + "-" + bowler.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(bowler.getPlayer(), bowler.getCountryName()));
+        });
+
+        // Convert batsmen to DTOs and add to the map
+        batsmen.forEach(batsman -> {
+            String key = batsman.getPlayer() + "-" + batsman.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(batsman.getPlayer(), batsman.getCountryName()));
+        });
+
+        // Convert the map values to a list
+        List<PlayerNameDto> playerNameDtos = new ArrayList<>(playerMap.values());
+
+        // Limit the number of suggestions
+        // If you need to limit the number of results, uncomment the following line
+        // playerNameDtos = playerNameDtos.stream().limit(10).collect(Collectors.toList());
+
+        return playerNameDtos;
+    }
+
+    @Override
+    public Page<PlayerNameDto> findPlayerByCountryName(String countryName, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Bowler> bowlerPage = bowlerRepository.findByCountryNameContainingIgnoreCase(countryName, pageable);
+        Page<Batsman> batsmanPage = batsmanRepository.findByCountryNameContainingIgnoreCase(countryName, pageable);
+
+        if (bowlerPage.isEmpty() && batsmanPage.isEmpty()) {
+            throw new CountryNotFoundException("No teams found with the name: " + countryName);
+        }
+
+        // Combine and process the results as before
+        Map<String, PlayerNameDto> playerMap = new HashMap<>();
+        bowlerPage.forEach(bowler -> {
+            String key = bowler.getPlayer() + "-" + bowler.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(bowler.getPlayer(), bowler.getCountryName()));
+        });
+
+        batsmanPage.forEach(batsman -> {
+            String key = batsman.getPlayer() + "-" + batsman.getCountryName();
+            playerMap.putIfAbsent(key, new PlayerNameDto(batsman.getPlayer(), batsman.getCountryName()));
+        });
+
+        List<PlayerNameDto> playerNameDtos = new ArrayList<>(playerMap.values());
+
+        return new PageImpl<>(playerNameDtos, pageable, playerNameDtos.size());
+    }
+
+
+
     private double calculateBatsmanScore(Batsman batsman) {
         double score = 0;
         score += batsman.getRuns() != null ? batsman.getRuns() / 1000.0 : 0; // Runs
@@ -220,40 +310,58 @@ public class MainPlayerServiceImpl implements MainPlayerService {
         return score;
     }
 
-    private static class ScoredBatsman {
-        private final Batsman batsman;
-        private final double score;
+    private double calculatePlayerScore(PlayerDto player) {
+        double score = 0;
 
-        public ScoredBatsman(Batsman batsman, double score) {
-            this.batsman = batsman;
-            this.score = score;
-        }
+        // Batting score calculation
+        score += player.getRuns() != null ? player.getRuns() / 1000.0 : 0;
+        score += player.getBattingAverage() != null ? player.getBattingAverage() / 50.0 : 0;
+        score += player.getHundreds() != null ? player.getHundreds() * 5.0 : 0;
+        score += player.getFifties() != null ? player.getFifties() * 2.0 : 0;
+        score += player.getBallFaced() != null ? player.getBallFaced() / 100.0 : 0;
 
-        public Batsman getBatsman() {
-            return batsman;
-        }
+        // Bowling score calculation
+        score += player.getTotalWickets() != null ? player.getTotalWickets() * 3.0 : 0;
+        score += player.getRunsConcede() != null ? (300 - player.getRunsConcede()) / 10.0 : 0;
+        score += player.getBowlingAverage() != null ? (30 - player.getBowlingAverage()) / 5.0 : 0;
+        score += player.getFourWicket() != null ? player.getFourWicket() * 2.0 : 0;
+        score += player.getFiveWicket() != null ? player.getFiveWicket() * 5.0 : 0;
 
-        public double getScore() {
-            return score;
-        }
+        return score;
     }
 
-    private static class ScoredBowler {
-        private final Bowler bowler;
-        private final double score;
+private static class ScoredBatsman {
+    private final Batsman batsman;
+    private final double score;
 
-        public ScoredBowler(Bowler bowler, double score) {
-            this.bowler = bowler;
-            this.score = score;
-        }
-
-        public Bowler getBowler() {
-            return bowler;
-        }
-
-        public double getScore() {
-            return score;
-        }
+    public ScoredBatsman(Batsman batsman, double score) {
+        this.batsman = batsman;
+        this.score = score;
     }
 
+    public Batsman getBatsman() {
+        return batsman;
+    }
+
+    public double getScore() {
+        return score;
+    }
+}
+
+private static class ScoredBowler {
+    private final Bowler bowler;
+    private final double score;
+
+    public ScoredBowler(Bowler bowler, double score) {
+        this.bowler = bowler;
+        this.score = score;
+    }
+    public Bowler getBowler() {
+        return bowler;
+    }
+
+    public double getScore() {
+        return score;
+    }
+  }
 }

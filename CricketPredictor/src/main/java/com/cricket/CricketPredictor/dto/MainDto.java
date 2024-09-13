@@ -2,33 +2,14 @@ package com.cricket.CricketPredictor.dto;
 
 import lombok.Data;
 
+
 @Data
 public class MainDto {
+    private String player; // Use playerName for clarity
+    private String countryName; // Renamed from role to countryName
 
-    private String player;
-    private String span;
-    private Integer matches;
-    private Integer innings;
-    private String countryName;
-
-    // Batting statistics
-    private Integer notOut;
-    private Integer runs;
-    private String highestScore;
-    private Double battingAverage;
-    private Integer ballFaced;
-    private Double battingStrickRate;
-    private Integer hundreds;
-    private Integer fifties;
-    private Integer ducks;
-
-    // Bowling statistics
-    private Integer totalBall;
-    private Integer runsConcede;
-    private Integer totalWickets;
-    private Double bowlingAverage;
-    private Double bowlingEconomy;
-    private Double bowlingStrickRate;
-    private Integer fourWicket;
-    private Integer fiveWicket;
+    @Override
+    public String toString() {
+        return "MainDto{playerName='" + player + "', countryName='" + countryName + "'}";
+    }
 }
